@@ -1,9 +1,13 @@
-FROM apache/airflow:2.9.2
+FROM apache/airflow:2.9.2-python3.12
 
-# Ejecutar pip como usuario airflow (no root)
 USER airflow
 
 COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
 
-ENV AIRFLOW_HOME=/opt/airflow
+USER root
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+USER airflow
+ENTRYPOINT ["/entrypoint.sh"]

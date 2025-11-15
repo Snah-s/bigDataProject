@@ -13,24 +13,17 @@ KPIS_COLLECTION = "kpis"
 
 
 def run_loader_script(**context):
-  """
-  Llama a load_copa32_to_mongo.py (ETL -> Mongo).
-  El script está en la misma carpeta /opt/airflow/dags.
-  """
+  """Llama a load_copa32_to_mongo.py (ETL -> Mongo)."""
   dag_dir = Path(__file__).resolve().parent
   script_path = dag_dir / "load_copa32_to_mongo.py"
 
   cmd = ["python", str(script_path)]
-  # no hay input interactivo en el script
   subprocess.run(cmd, check=True, text=True)
 
 
 def compute_team_kpis(**context):
   """
-  KPI por equipo:
-    - total_shots: número de eventos type='Shot'
-    - matches: número de partidos distintos
-    - shots_per_match: total_shots / matches
+  KPI por equipo: total_shots, matches, shots_per_match
   Guarda resultados en colección 'kpis' con level='team'.
   """
   client = MongoClient(MONGO_URI, authSource="admin")
@@ -67,7 +60,6 @@ def compute_team_kpis(**context):
 
   results = list(events.aggregate(pipeline))
 
-  # Limpiar KPIs previos de nivel 'team'
   col_kpis.delete_many({"level": "team"})
 
   if results:
@@ -94,12 +86,12 @@ default_args = {
   "retry_delay": timedelta(minutes=5),
 }
 
-# 💡 IMPORTANTE: el DAG se define a NIVEL MÓDULO, sin if __name__...
+# 💡 OJO: el DAG se define a nivel módulo, sin if __name__ == "__main__"
 with DAG(
   dag_id="copa2024_pipeline",
   default_args=default_args,
   description="ETL + KPIs Copa América 2024 hacia MongoDB",
-  schedule_interval=None,  # manual desde la UI
+  schedule_interval=None,  # solo manual desde la UI
   start_date=datetime(2025, 1, 1),
   catchup=False,
   tags=["copa2024", "mongo", "bigdata"],
