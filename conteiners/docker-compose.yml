@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: mongo_copa2024
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: copa2024
+    volumes:
+      - ./mongo/db:/data/db
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo_express_copa2024
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+
+  airflow:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    container_name: airflow_copa2024
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "8080:8080"   # Airflow web UI
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      AIRFLOW__CORE__FERNET_KEY: "thisisnotsecure_changeit"
+      AIRFLOW_UID: "50000"
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./mongo/data:/opt/airflow/data
+    command: >
+      bash -c "
+      if [ ! -f /opt/airflow/airflow.db ]; then
+        echo '>>> Inicializando DB de Airflow...';
+        airflow db init &&
+        echo '>>> Creando usuario admin...' &&
+        airflow users create
+          --username admin
+          --password admin
+          --firstname Admin
+          --lastname User
+          --role Admin
+          --email admin@example.com;
+      fi;
+      echo '>>> Iniciando webserver y scheduler...';
+      airflow webserver --port 8080 & 
+      airflow scheduler
+      "

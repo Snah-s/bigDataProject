@@ -1,0 +1,2 @@
+Aca agrega tu dataset en json siempre y cuando sea no estructurado y siga el esquema de Statsbombpy
+Renombralo con el nombre copa32_events.json
