@@ -25,7 +25,14 @@ else
     echo ">>> Usuario admin ya existe, saltando creación"
 fi
 
+echo ">>> Comprobando pool 'default_pool'..."
+# Si el pool default_pool no existe, lo creamos con 32 slots
+if ! airflow pools get default_pool >/dev/null 2>&1; then
+  echo ">>> Creando pool 'default_pool'..."
+  airflow pools set default_pool 32 "Default pool"
+fi
+
 echo ">>> Iniciando webserver y scheduler..."
 airflow webserver --port 8080 &
 
-exec airflow scheduler
+airflow scheduler
