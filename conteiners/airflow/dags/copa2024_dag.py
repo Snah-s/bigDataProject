@@ -6,14 +6,13 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from pymongo import MongoClient
 
-# ===== CONFIG MONGO (dentro de Docker) =====
+# config
 MONGO_URI = "mongodb://root:example@mongo:27017"
 DB_NAME = "copa2024"
 KPIS_COLLECTION = "kpis"
 
 
 def run_loader_script(**context):
-  """Llama a load_copa32_to_mongo.py (ETL -> Mongo)."""
   dag_dir = Path(__file__).resolve().parent
   script_path = dag_dir / "load_copa32_to_mongo.py"
 
@@ -22,10 +21,6 @@ def run_loader_script(**context):
 
 
 def compute_team_kpis(**context):
-  """
-  KPI por equipo: total_shots, matches, shots_per_match
-  Guarda resultados en colección 'kpis' con level='team'.
-  """
   client = MongoClient(MONGO_URI, authSource="admin")
   db = client[DB_NAME]
 
@@ -86,12 +81,11 @@ default_args = {
   "retry_delay": timedelta(minutes=5),
 }
 
-# 💡 OJO: el DAG se define a nivel módulo, sin if __name__ == "__main__"
 with DAG(
   dag_id="copa2024_pipeline",
   default_args=default_args,
   description="ETL + KPIs Copa América 2024 hacia MongoDB",
-  schedule_interval=None,  # solo manual desde la UI
+  schedule_interval=None,
   start_date=datetime(2025, 1, 1),
   catchup=False,
   tags=["copa2024", "mongo", "bigdata"],
