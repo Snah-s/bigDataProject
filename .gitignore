@@ -2,3 +2,4 @@ conteiners/mongo/data/copa32_events.json
 conteiners/airflow/dags/__pycache__/
 conteiners/airflow/logs/dag_processor_manager
 conteiners/airflow/logs/scheduler/
+conteiners/mongo/db

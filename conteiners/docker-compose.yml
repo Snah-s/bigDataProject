@@ -53,19 +53,14 @@ services:
       - ./mongo/data:/opt/airflow/data
     command: >
       bash -c "
-      if [ ! -f /opt/airflow/airflow.db ]; then
-        echo '>>> Inicializando DB de Airflow...';
-        airflow db init &&
-        echo '>>> Creando usuario admin...' &&
-        airflow users create
-          --username admin
-          --password admin
-          --firstname Admin
-          --lastname User
-          --role Admin
-          --email admin@example.com;
-      fi;
-      echo '>>> Iniciando webserver y scheduler...';
+      airflow db init &&
+      airflow users create
+        --username admin
+        --password admin
+        --firstname Admin
+        --lastname User
+        --role Admin
+        --email admin@example.com || true &&
       airflow webserver --port 8080 & 
       airflow scheduler
       "

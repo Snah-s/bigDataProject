@@ -4,25 +4,35 @@ import subprocess
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-
 from pymongo import MongoClient
 
-
-# config
+# ===== CONFIG MONGO (dentro de Docker) =====
 MONGO_URI = "mongodb://root:example@mongo:27017"
 DB_NAME = "copa2024"
 KPIS_COLLECTION = "kpis"
 
 
-def run_loader_script():
+def run_loader_script(**context):
+  """
+  Llama a load_copa32_to_mongo.py (ETL -> Mongo).
+  El script está en la misma carpeta /opt/airflow/dags.
+  """
   dag_dir = Path(__file__).resolve().parent
   script_path = dag_dir / "load_copa32_to_mongo.py"
 
   cmd = ["python", str(script_path)]
+  # no hay input interactivo en el script
   subprocess.run(cmd, check=True, text=True)
 
 
-def compute_team_kpis():
+def compute_team_kpis(**context):
+  """
+  KPI por equipo:
+    - total_shots: número de eventos type='Shot'
+    - matches: número de partidos distintos
+    - shots_per_match: total_shots / matches
+  Guarda resultados en colección 'kpis' con level='team'.
+  """
   client = MongoClient(MONGO_URI, authSource="admin")
   db = client[DB_NAME]
 
@@ -57,6 +67,7 @@ def compute_team_kpis():
 
   results = list(events.aggregate(pipeline))
 
+  # Limpiar KPIs previos de nivel 'team'
   col_kpis.delete_many({"level": "team"})
 
   if results:
@@ -83,11 +94,12 @@ default_args = {
   "retry_delay": timedelta(minutes=5),
 }
 
+# 💡 IMPORTANTE: el DAG se define a NIVEL MÓDULO, sin if __name__...
 with DAG(
   dag_id="copa2024_pipeline",
   default_args=default_args,
   description="ETL + KPIs Copa América 2024 hacia MongoDB",
-  schedule_interval=None,
+  schedule_interval=None,  # manual desde la UI
   start_date=datetime(2025, 1, 1),
   catchup=False,
   tags=["copa2024", "mongo", "bigdata"],
